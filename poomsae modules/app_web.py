@@ -6565,7 +6565,8 @@ const STATE = {
     timerColor:'#ffef00',
     lastGoodTime:{match:'', minutes:0, seconds:0, control:''},
     noActiveCount:0,
-    localLockScreen:''
+    localLockScreen:'',
+    readyRenderKey:''  // Tránh dựng lại ảnh cờ khi poll không đổi trạng thái.
 };
 async function lockLandscapeAndFullscreen(){
     try{
@@ -11485,22 +11486,21 @@ async function poll(){
             STATE.noActiveCount++;
 
             // Chống văng màn hình khi Supabase trả rỗng thoáng qua
-            if(
-                STATE.noActiveCount < 3 &&
-                STATE.match &&
-                STATE.screen !== 'wait' &&
-                STATE.screen !== 'ready'
-            ){
+            if(STATE.noActiveCount < 3 && STATE.match){
+                // Mất một phản hồi tạm thời: giữ nguyên DOM/cờ đang hiển thị.
                 pollTime();
                 return;
             }
 
+            if(STATE.screen !== 'wait'){
+                STATE.screen = 'wait';
+                pageWait();
+            }
             STATE.match = null;
             STATE.ready = {slot:'', poomsae:''};
             STATE.judge_status = '';
             STATE.localLockScreen='';
-            STATE.screen = 'wait';
-            pageWait();
+            STATE.readyRenderKey = '';
             return;
         }
 
@@ -11586,17 +11586,29 @@ async function poll(){
         STATE.judge_status = r.judge_status;
 
         if(!STATE.ready.slot){
-            STATE.screen = 'ready';
-
-            if((r.judge_status || '').toLowerCase() === 'finish 1'){
-                pageWait(
-                    'WAITING POOMSAE 2',
-                    'Waiting for controller to ready Poomsae 2...'
-                );
-            }else{
-                pageReady(r.row, 'MATCH START');
+            const finishedFirst = (r.judge_status || '').toLowerCase() === 'finish 1';
+            // Tất cả trường ảnh hưởng tới màn hình READY. Chỉ cập nhật khi thay đổi.
+            const readyKey = JSON.stringify([
+                'no-slot', finishedFirst, newMatch,
+                r.row?.Phase, r.row?.Division, r.row?.Method,
+                r.row?.['Poomsae Type'],
+                r.row?.['NOC Blue'], r.row?.['NOC Red'],
+                r.row?.['Athlete Blue'], r.row?.['Athlete Red'],
+                r.judge_status, r.row?.[STATE.judge_id],
+                newPoomsae, newCurrent
+            ]);
+            if(STATE.screen !== 'ready' || STATE.readyRenderKey !== readyKey){
+                STATE.screen = 'ready';
+                STATE.readyRenderKey = readyKey;
+                if(finishedFirst){
+                    pageWait(
+                        'WAITING POOMSAE 2',
+                        'Waiting for controller to ready Poomsae 2...'
+                    );
+                }else{
+                    pageReady(r.row, 'MATCH START');
+                }
             }
-
             return;
         }
 
@@ -11636,9 +11648,17 @@ async function poll(){
 
         if(control !== 'start'){
             const waitText = `POOMSAE READY\n${STATE.ready.poomsae}\nWaiting Start Time...`;
-
-            if(needRender || STATE.screen !== 'ready'){
+            const readyKey = JSON.stringify([
+                'with-slot', newMatch, newSlot, newPoomsae, newCurrent,
+                r.row?.Phase, r.row?.Division, r.row?.Method,
+                r.row?.['Poomsae Type'],
+                r.row?.['NOC Blue'], r.row?.['NOC Red'],
+                r.row?.['Athlete Blue'], r.row?.['Athlete Red'],
+                r.judge_status, r.row?.[STATE.judge_id]
+            ]);
+            if(STATE.screen !== 'ready' || STATE.readyRenderKey !== readyKey){
                 STATE.screen = 'ready';
+                STATE.readyRenderKey = readyKey;
                 pageReady(r.row, waitText);
             }else{
                 pollTime();
