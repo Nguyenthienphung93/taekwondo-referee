@@ -291,6 +291,13 @@ def load_event_json():
     return {'event_name': metadata.get('event',''), 'divisions': data.get('divisions', {})}
 
 
+# Favicon: reuse the same original NTP logo used in the portal header.
+# Browser requests to /favicon.ico are redirected to the existing logo endpoint.
+@app.get('/favicon.ico')
+def ntp_favicon():
+    return redirect('/referee-logo?v=20261118', code=302)
+
+
 @app.route("/icon/<path:filename>")
 def icon_files(filename):
     return send_from_directory(
@@ -832,7 +839,9 @@ def kyeorugi_weighin_api():
 
 
 
-REFEREE_HTML = r'''<!doctype html><html lang="vi"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+REFEREE_HTML = r'''<!doctype html><html lang="vi"><head>
+<link rel="icon" type="image/png" sizes="any" href="/referee-logo?v=20261118" />
+<link rel="apple-touch-icon" href="/referee-logo?v=20261118" /><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Referee | {{ event_name }}</title><style>
 
 *{box-sizing:border-box}
@@ -3861,7 +3870,9 @@ kById('kLoginBtn').addEventListener('click',async()=>{
 </script></body></html>'''
 
 HOME_HTML = r"""<!doctype html>
-<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="vi"><head>
+<link rel="icon" type="image/png" sizes="any" href="/referee-logo?v=20261118" />
+<link rel="apple-touch-icon" href="/referee-logo?v=20261118" /><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Taekwondo Referee Portal — Select Event</title>
 <style>
 *{box-sizing:border-box}
