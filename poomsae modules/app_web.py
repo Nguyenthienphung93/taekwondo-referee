@@ -517,6 +517,10 @@ PAGE = r'''
 <html lang="en">
 <head>
 <link rel="manifest" href="{{ request.script_root }}/manifest.json">
+<!-- Judge controller favicon: route relative to Judge Web mount point. -->
+<link rel="icon" type="image/png" sizes="any" href="{{ request.script_root }}/favicon.png?v=judge2">
+<link rel="shortcut icon" href="{{ request.script_root }}/favicon.ico?v=judge2">
+<link rel="apple-touch-icon" href="{{ request.script_root }}/apple-touch-icon.png?v=judge2">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Poomsae Scoring Web</title>
@@ -11667,6 +11671,30 @@ poll();
 # =========================
 # ROUTES
 # =========================
+# Use the Judge controller icon, independent of Tournament/Referee branding.
+# Depending on the installation it is stored in icon/ or icons/.
+def _judge_controller_favicon_path():
+    for candidate in (
+        ROOT / 'icon' / 'judge_icon.png',
+        ROOT / 'icons' / 'judge_icon.png',
+    ):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+@app.route('/favicon.png')
+@app.route('/favicon.ico')
+@app.route('/apple-touch-icon.png')
+def judge_controller_favicon():
+    image = _judge_controller_favicon_path()
+    if image is None:
+        abort(404)
+    response = send_from_directory(str(image.parent), image.name, mimetype='image/png', max_age=3600)
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @app.route('/judge-login-background')
 def judge_login_background():
     image = ROOT / 'icons' / 'TKD_web.png'
@@ -12485,7 +12513,10 @@ def manifest():
         "display": "fullscreen",
         "background_color": "#02040a",
         "theme_color": "#02040a",
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "icons": [
+            {"src": request.script_root + "/favicon.png?v=judge2", "sizes": "any", "type": "image/png", "purpose": "any"}
+        ]
     })
 
 import sys
